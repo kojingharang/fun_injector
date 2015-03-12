@@ -1,0 +1,5 @@
+%% encoding: UTF-8
+{application,fun_injector}.
+{packages,[]}.
+{modules,[fun_injector,fun_injector_sample_gen_server,
+          fun_injector_sample_module_a,t]}.
