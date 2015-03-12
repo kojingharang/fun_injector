@@ -4,7 +4,7 @@ Injects functions in some module to specified gen_server by using parse_transfor
 
 Status
 ======
-very alpha.
+the very alpha.
 
 - TODOs
  - Write spec
