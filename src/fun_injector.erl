@@ -215,7 +215,7 @@ extract_clause_from_fun({'fun', _, {clauses, [Clause]}}) ->
 %% -spec add(pid(), integer(), integer()) -> integer().
 %% add(ServerRef, A, B) ->
 %%     gen_server:call(ServerRef, {add, A, B}).
-gen_entry_fun(Fun, Arity, {_AT, _RT}) ->
+gen_entry_fun(Fun, Arity, {_F, _AT, _RT}) ->
     Args = gen_args_src(Arity-1),
     ReqTuple = gen_tuple([gen_atom(Fun)]++Args),
     S = format("fun(~s) -> gen_server:call(ServerRef, {~s}) end.",
@@ -233,22 +233,19 @@ join_comma(Ss) ->
 
 %% init([]) ->
 %%     fun_injector_sample_module_a:init(1).
-gen_init_fun(Mod, Fun, Arity, {_AT, _RT}) ->
+gen_init_fun(Mod, Fun, Arity, {_F, _AT, _RT}) ->
     Args = gen_args_src(Arity),
-    %% TODO gen spec
     S = format("fun([~s]) -> ~s:~s(~s) end.",
                [join_comma(Args), atom_to_list(Mod), atom_to_list(Fun), join_comma(Args)]),
-    %% AT = % TODO extract from orig spec
-    %% RT = gen_type(gen_remote_type(Mod, state)),
-    %% t:d({spec, gen_spec(init, AT, RT)}),
+    t:d({init_spec, _F, _AT, _RT}),
     [
-     gen_spec(init, _AT, _RT),
+     gen_spec(init, [gen_type('list', _AT)], _RT),
      gen_fun(init, Arity, [gen_clause(S)])
     ].
 
 %% start_link(ServerName, _V0, Options) ->
 %%     gen_server:start_link({local, ?MODULE}, ?MODULE, [_V0], []).
-gen_start_link_fun(WithServerName, ServerMod, Fun, Arity, {_AT, _RT}) ->
+gen_start_link_fun(WithServerName, ServerMod, Fun, Arity, {_F, _AT, _RT}) ->
     Args = gen_args_src(Arity),
     AdditionalArg = case WithServerName of
                         true -> ["ServerName"];
@@ -301,23 +298,24 @@ extract_funs(ServerMod, Mod) ->
 %%          {type,39,product,[{type,39,integer,[]},{type,39,state,[]}]},
 %%          {type,39,tuple,[{type,39,integer,[]},{type,39,state,[]}]}}]}
 
-            Specs = lists:filtermap(fun({attribute, _, spec, {MA, [{type, _, 'fun', [A, R]}]}}) -> {true, {MA, A, R}};
+            Specs = lists:filtermap(fun({attribute, _, spec, {{F, _}, [{type, _, 'fun', [{type, _, product, As}, R]}]}})
+                                       -> {true, {F, As, R}};
                                        (_) -> false
                                     end, Forms),
             t:d({specs, Specs}),
+            InitOrigSpec = lists:keyfind(init, 1, Specs),
             GenFuns = [ F || F={Name, _} <- ExportedFuns, Name=/=init ],
             InitFuns = [ F || F={Name, _} <- ExportedFuns, Name=:=init ],
             case InitFuns of
                 [] ->
                     {error, "No init/? fun."};
                 [{InitFun, InitArity}|_] ->
-                    %% pass init/? to OrigSpec
-                    OrigSpec = {1, 2},
-                    InitFunForm = gen_init_fun(Mod, InitFun, InitArity, OrigSpec),
-                    StartLinkFunUsing3 = gen_start_link_fun(false, ServerMod, InitFun, InitArity, OrigSpec),
-                    StartLinkFunUsing4 = gen_start_link_fun(true, ServerMod, InitFun, InitArity, OrigSpec),
+                    InitFunForm = gen_init_fun(Mod, InitFun, InitArity, InitOrigSpec),
+                    StartLinkFunUsing3 = gen_start_link_fun(false, ServerMod, InitFun, InitArity, InitOrigSpec),
+                    StartLinkFunUsing4 = gen_start_link_fun(true, ServerMod, InitFun, InitArity, InitOrigSpec),
                     t:d({init_fun, InitFunForm}),
                     t:d({genFuns, GenFuns}),
+                    OrigSpec = InitOrigSpec, % TODO
                     {Es, Cs, Fs} = lists:unzip3([ {{F,A}, gen_handle_call_clause(Mod, F, A), gen_entry_fun(F, A, OrigSpec)} || {F, A} <- GenFuns ]),
                     {ok,
                      [{start_link, InitArity+1}, {start_link, InitArity+2}|Es],
