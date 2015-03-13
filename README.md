@@ -12,7 +12,7 @@ Motivation
 
 How to use
 ======
-1. Add entry to rebar.config in your project.
+0. Add entry to rebar.config in your project.
 ```
 {fun_injector, ".*", {git, "git://github.com/kojingharang/fun_injector.git", {branch, "master"}}}
 ```
