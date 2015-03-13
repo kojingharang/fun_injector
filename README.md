@@ -7,7 +7,6 @@ Status
 the very alpha.
 
 - TODOs
- - Write spec
- - Generate spec
+ - Docs
  - Error handling
  - Output deparsed source of generated AST
