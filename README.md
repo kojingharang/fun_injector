@@ -16,7 +16,6 @@ How to use
 ```
 {fun_injector, ".*", {git, "git://github.com/kojingharang/fun_injector.git", {branch, "master"}}}
 ```
-
 2. Add an empty gen_server implementation.
 3. Add compile option like this:
 ```
