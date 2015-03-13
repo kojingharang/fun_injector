@@ -1,7 +1,7 @@
 %% vim: set ft=erlang : -*- erlang -*-
 {application, fun_injector,
  [
-  {description, "Type safe gen_server generator: It injects functions in some module to specified gen_server"},
+  {description, "Type safe gen_server generator: It injects functions in some module to specified gen_server by using parse_transform."},
   {vsn, git},
   {registered, []},
   {applications, [
