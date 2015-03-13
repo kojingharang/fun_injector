@@ -4,7 +4,7 @@ Injects functions in some module to specified gen_server by using parse_transfor
 
 Motivation
 ======
-- It is sometimes not easy to test gen_server implementation.
+- Testing your gen_server is sometimes not easy.
 - To avoid that, you might split gen_server into complicated logic module and a thin gen_server which calls the logic module.
 - Then you might write exported functions which call gen_server:call, handle_call clauses which call corresponding funcion in the logic module, following some rules.
 - .... that's buggy and really boring.
