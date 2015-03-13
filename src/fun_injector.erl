@@ -215,7 +215,7 @@ extract_clause_from_fun({'fun', _, {clauses, [Clause]}}) ->
 %% -spec add(pid(), integer(), integer()) -> integer().
 %% add(ServerRef, A, B) ->
 %%     gen_server:call(ServerRef, {add, A, B}).
-gen_entry_fun(Fun, Arity) ->
+gen_entry_fun(Fun, Arity, {_AT, _RT}) ->
     Args = gen_args_src(Arity-1),
     ReqTuple = gen_tuple([gen_atom(Fun)]++Args),
     S = format("fun(~s) -> gen_server:call(ServerRef, {~s}) end.",
@@ -233,7 +233,7 @@ join_comma(Ss) ->
 
 %% init([]) ->
 %%     fun_injector_sample_module_a:init(1).
-gen_init_fun(Mod, Fun, Arity) ->
+gen_init_fun(Mod, Fun, Arity, {_AT, _RT}) ->
     Args = gen_args_src(Arity),
     %% TODO gen spec
     S = format("fun([~s]) -> ~s:~s(~s) end.",
@@ -247,7 +247,7 @@ gen_init_fun(Mod, Fun, Arity) ->
 
 %% start_link(ServerName, _V0, Options) ->
 %%     gen_server:start_link({local, ?MODULE}, ?MODULE, [_V0], []).
-gen_start_link_fun(WithServerName, ServerMod, Fun, Arity) ->
+gen_start_link_fun(WithServerName, ServerMod, Fun, Arity, {_AT, _RT}) ->
     Args = gen_args_src(Arity),
     AdditionalArg = case WithServerName of
                         true -> ["ServerName"];
@@ -288,6 +288,18 @@ extract_funs(ServerMod, Mod) ->
                                                         end, Forms)),
             t:d({loaded_mod, Forms}),
             t:d({exported, ExportedFuns}),
+%% {specs,[{{init,1},
+%%          {type,34,product,[{type,34,integer,[]}]},
+%%          {type,34,tuple,
+%%                [{atom,34,ok},
+%%                 {remote_type,34,
+%%                              [{atom,34,fun_injector_sample_module_a},
+%%                               {atom,34,state},
+%%                               []]}]}},
+%%         {{add,2},
+%%          {type,39,product,[{type,39,integer,[]},{type,39,state,[]}]},
+%%          {type,39,tuple,[{type,39,integer,[]},{type,39,state,[]}]}}]}
+
             Specs = lists:filtermap(fun({attribute, _, spec, {MA, [{type, _, 'fun', [A, R]}]}}) -> {true, {MA, A, R}};
                                        (_) -> false
                                     end, Forms),
@@ -298,12 +310,14 @@ extract_funs(ServerMod, Mod) ->
                 [] ->
                     {error, "No init/? fun."};
                 [{InitFun, InitArity}|_] ->
-                    InitFunForm = gen_init_fun(Mod, InitFun, InitArity),
-                    StartLinkFunUsing3 = gen_start_link_fun(false, ServerMod, InitFun, InitArity),
-                    StartLinkFunUsing4 = gen_start_link_fun(true, ServerMod, InitFun, InitArity),
+                    %% pass init/? to OrigSpec
+                    OrigSpec = {1, 2},
+                    InitFunForm = gen_init_fun(Mod, InitFun, InitArity, OrigSpec),
+                    StartLinkFunUsing3 = gen_start_link_fun(false, ServerMod, InitFun, InitArity, OrigSpec),
+                    StartLinkFunUsing4 = gen_start_link_fun(true, ServerMod, InitFun, InitArity, OrigSpec),
                     t:d({init_fun, InitFunForm}),
                     t:d({genFuns, GenFuns}),
-                    {Es, Cs, Fs} = lists:unzip3([ {{F,A}, gen_handle_call_clause(Mod, F, A), gen_entry_fun(F, A)} || {F, A} <- GenFuns ]),
+                    {Es, Cs, Fs} = lists:unzip3([ {{F,A}, gen_handle_call_clause(Mod, F, A), gen_entry_fun(F, A, OrigSpec)} || {F, A} <- GenFuns ]),
                     {ok,
                      [{start_link, InitArity+1}, {start_link, InitArity+2}|Es],
                      Cs,
