@@ -13,15 +13,15 @@ Motivation
 How to use
 ======
 0. Add entry to rebar.config in your project.
-          ```
+
           {fun_injector, ".*", {git, "git://github.com/kojingharang/fun_injector.git", {branch, "master"}}}
-          ```
+
 2. Add an empty gen_server implementation.
 3. Add compile option like this:
-          ```
+
           -compile([{parse_transform, fun_injector},
                     {fun_injector_extract_from, fun_injector_sample_module_a}]).
-          ```
+
 Now your gen_server have exported functions defined in fun_injector_sample_module_a.
 
 See test directory for detail.
