@@ -12,6 +12,8 @@ fun_injector_test_() ->
               ?assertEqual(3, gen_server:call(Pid, {add, 2})),
               ?assertEqual(5, fun_injector_sample_gen_server:add(Pid, 2)),
               ?assertEqual(5, fun_injector_sample_gen_server:get(Pid)),
+              %% Overloaded get
+              ?assertEqual(result_of_get2, fun_injector_sample_gen_server:get(Pid, 0)),
               ok
       end},
      {"launch server using gen_server:start_link/4",
@@ -20,6 +22,8 @@ fun_injector_test_() ->
               ?assertEqual(3, gen_server:call(fun_injector_sample_gen_server, {add, 2})),
               ?assertEqual(5, fun_injector_sample_gen_server:add(fun_injector_sample_gen_server, 2)),
               ?assertEqual(5, fun_injector_sample_gen_server:get(fun_injector_sample_gen_server)),
+              %% Overloaded get
+              ?assertEqual(result_of_get2, fun_injector_sample_gen_server:get(fun_injector_sample_gen_server, 0)),
               ok
       end}
     ].

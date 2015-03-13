@@ -10,7 +10,8 @@
 -export([
          init/1,
          add/2,
-         get/1
+         get/1,
+         get/2
         ]).
 
 -export_type([
@@ -31,18 +32,23 @@
 %%----------------------------------------------------------------------------------------------------------------------
 %% Exported Functions
 %%----------------------------------------------------------------------------------------------------------------------
--spec init(integer()) -> {ok, fun_injector_sample_module_a:state()}.
+-spec init(integer()) -> {ok, ?MODULE:state()}.
 init(V) ->
     t:d({init, V}),
     {ok, #?STATE{value=V}}.
 
--spec add(integer(), state()) -> {integer(), state()}.
+-spec add(integer(), state()) -> {integer(), ?MODULE:state()}.
 add(V, State=#?STATE{value=Cur}) when V >= 0 ->
     t:d({add, V, cur, Cur}),
     {Cur+V, State#?STATE{value=Cur+V}}.
 
+-spec get(state()) -> {integer(), ?MODULE:state()}.
 get(State=#?STATE{value=Cur}) ->
     {Cur, State}.
+
+-spec get(term(), state()) -> {integer(), ?MODULE:state()}.
+get(_Any, State) ->
+    {result_of_get2, State}.
 
 %%----------------------------------------------------------------------------------------------------------------------
 %% Internal Functions

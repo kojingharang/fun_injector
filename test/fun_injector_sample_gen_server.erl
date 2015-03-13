@@ -41,7 +41,7 @@ handle_call(_Request, _From, State) ->
 
 %% @private
 handle_cast(_Request, State) ->
-    %% _A = add(self(), not_an_integer), % cause dialyzer error as expected!
+    _A = add(self(), not_an_integer), % cause dialyzer error as expected!
     {noreply, State}.
 
 %% @private
