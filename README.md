@@ -1,6 +1,6 @@
 fun_injector
 ======
-Injects functions in some module to specified gen_server by using parse_transform
+Type safe gen_server generator: It injects functions in specified module to some empty gen_server by using parse_transform
 
 Motivation
 ======
