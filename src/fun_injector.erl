@@ -16,7 +16,7 @@
 %%----------------------------------------------------------------------------------------------------------------------
 %% Macros & Records & Types
 %%----------------------------------------------------------------------------------------------------------------------
-%% -define(LOG(Any), t:d(Any)).
+%% -define(LOG(Any), ok = io:format("~p~n", [Any])).
 -define(LOG(_Any), ok).
 
 -type expr() :: erl_parse:abstract_expr().
@@ -56,6 +56,14 @@ parse_transform(Forms, _Options) ->
 %%----------------------------------------------------------------------------------------------------------------------
 %% Internal Functions
 %%----------------------------------------------------------------------------------------------------------------------
+-spec format(io:format(), [term()]) -> string().
+format(Format, String) ->
+    lists:flatten(io_lib:format(Format, String)).
+
+-spec join_comma([string()]) -> string().
+join_comma(Ss) ->
+    string:join(Ss, ", ").
+
 -spec extract_target_module([erl_parse:abstract_form()]) -> module().
 extract_target_module(Forms) ->
     Mods = lists:append(lists:filtermap(
@@ -109,12 +117,7 @@ gen_fun(Name, Arity, Clauses) -> {function, 1, Name, Arity, Clauses}.
 -spec gen_type(atom(), [expr()]) -> expr().
 gen_type(T, Args) -> {type, 1, T, Args}.
 
-%% {remote_type,33,
-%%                          [{atom,33,fun_injector_sample_module_a},
-%%                           {atom,33,state}],
-%% gen_remote_type(Mod, Type) ->
-%%     {remote_type, 1, [gen_atom(Mod), gen_atom(Type)]}.
-
+%% Example:
 %% {attribute,42,spec,
 %%  {{init,1},
 %%   [{type,42,'fun',
@@ -148,22 +151,14 @@ parse(String) ->
 gen_clause(S) ->
     extract_clause_from_fun(parse(S)).
 
--spec format(io:format(), [term()]) -> string().
-format(Format, String) ->
-    lists:flatten(io_lib:format(Format, String)).
-
-%% handle_call(_Request={add, V}, _From, State) ->
-%%     ?LOG({call, _Request}),
+%% Example:
+%% handle_call({add, V}, _From, State) ->
 %%     {V1, S1} = fun_injector_sample_module_a:add(V, State),
 %%     {reply, V1, S1};
 -spec gen_handle_call_clause(module(), atom(), integer()) -> expr().
 gen_handle_call_clause(Mod, Fun, Arity) ->
     Args = gen_args_src(Arity-1),
     ReqList = [atom_to_list(Fun)]++Args,
-    %% ReqTuple = gen_tuple([gen_atom(Fun)]++Args),
-    %% {clause, Line, Args, Guards, Body}
-    %% {call, Line, {remote, Line, {atom, Line, Mod}, {atom, Line, Fun}}
-    %% ?LOG({ff, parse("-spec foo(integer()) -> integer().")}),
     S = format("fun({~s}, _From, State) -> {RV, S1} = ~p:~p(~s), {reply, RV, S1} end.",
                [join_comma(ReqList), Mod, Fun, join_comma(Args++["State"])]),
     ?LOG({parsed, parse(S)}),
@@ -173,10 +168,7 @@ gen_handle_call_clause(Mod, Fun, Arity) ->
 extract_clause_from_fun({'fun', _, {clauses, [Clause]}}) ->
     Clause.
 
--spec join_comma([string()]) -> string().
-join_comma(Ss) ->
-    string:join(Ss, ", ").
-
+%% Example:
 %% -spec add(pid(), integer(), integer()) -> integer().
 %% add(ServerRef, A, B) ->
 %%     gen_server:call(ServerRef, {add, A, B}).
@@ -197,6 +189,7 @@ gen_entry_fun(Fun, Arity, {{_F, _A}, _AT, _RT}) ->
      gen_fun(Fun, Arity, [gen_clause(S)])
     ].
 
+%% Example:
 %% init([]) ->
 %%     fun_injector_sample_module_a:init(1).
 -spec gen_init_fun(module(), atom(), integer(), spec()) -> [erl_parse:abstract_form()].
@@ -210,6 +203,7 @@ gen_init_fun(Mod, Fun, Arity, {{_F, _A}, _AT, _RT}) ->
      gen_fun(init, Arity, [gen_clause(S)])
     ].
 
+%% Example:
 %% start_link(ServerName, _V0, Options) ->
 %%     gen_server:start_link({local, ?MODULE}, ?MODULE, [_V0], []).
 -spec gen_start_link_fun(boolean(), module(), atom(), integer(), spec()) -> [erl_parse:abstract_form()].
@@ -245,7 +239,6 @@ find_spec(Fun, Arity, Specs) ->
 extract_funs(ServerMod, Mod) ->
     case load_code(Mod) of
         {ok, Forms} ->
-            %% get exported funs.
             ExportedFuns = lists:append(lists:filtermap(fun({attribute, _, export, FAs}) ->
                                                                 {true, FAs};
                                                            (_) -> false

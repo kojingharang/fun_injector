@@ -25,6 +25,10 @@ Copyright (c) (C) 2015 Koji Hara. All Rights Reserved.
 
 ### parse_transform/2 ###
 
-`parse_transform(Forms, Options) -> any()`
+
+<pre><code>
+parse_transform(Forms::[<a href="erl_parse.md#type-abstract_form">erl_parse:abstract_form()</a>], Options::[<a href="compile.md#type-option">compile:option()</a>]) -&gt; [<a href="erl_parse.md#type-abstract_form">erl_parse:abstract_form()</a>]
+</code></pre>
+<br />
 
 
