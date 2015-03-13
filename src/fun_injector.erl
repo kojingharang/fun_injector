@@ -30,13 +30,13 @@ parse_transform(Forms, _Options) ->
     case extract_target_module(Forms) of
         {ok, Mod} ->
             case extract_funs(ServerMod, Mod) of
-                {ok, AddExports, AddClauses, AddFuns} ->
+                {ok, AddExports, AddClauses, AddSpecFuns} ->
                     F = fun(El={attribute, _, module, _}, Acc) ->
                                 [{attribute, 11, export, AddExports}, El | Acc];
                            (El={function, Line, handle_call, 3, Clauses}, Acc) ->
                                 [{function, Line, handle_call, 3, AddClauses++Clauses} | Acc];
                            (El={eof, _}, Acc) ->
-                                lists:reverse(lists:reverse(AddFuns)++[El], Acc);
+                                lists:reverse(lists:reverse(AddSpecFuns)++[El], Acc);
                            (El, Acc) ->
                                 [El | Acc]
                         end,
@@ -100,8 +100,14 @@ load_code(Mod) when is_atom(Mod) ->
 gen_var_name(I) ->
     list_to_atom(lists:flatten(io_lib:format("__V~p", [I]))).
 
+gen_var_name_src(I) ->
+    lists:flatten(io_lib:format("__V~p", [I])).
+
 gen_args(Arity) ->
     [ gen_var(gen_var_name(I)) || I <- lists:seq(1, Arity) ].
+
+gen_args_src(Arity) ->
+    [ gen_var_name_src(I) || I <- lists:seq(1, Arity) ].
 
 
 gen_error(Mod, Reason) ->
@@ -140,68 +146,131 @@ gen_nil() ->
 gen_list(Elements) ->
     lists:foldr(fun gen_cons/2, gen_nil(), Elements).
 
+%% @doc T: tuple, ...
+gen_type(T, Args) ->
+    {type, 1, T, Args}.
+
+%% {remote_type,33,
+%%                          [{atom,33,fun_injector_sample_module_a},
+%%                           {atom,33,state}],
+gen_remote_type(Mod, Type) ->
+    {remote_type, 1, [gen_atom(Mod), gen_atom(Type)]}.
+
+%% {attribute,42,spec,
+%%  {{init,1},
+%%   [{type,42,'fun',
+%%     [{type,42,product,[{type,42,integer,[]}]},
+%%      {type,42,tuple,[{atom,42,ok},{type,42,state,[]}]}]}]}},
+gen_spec(Fun, Args, ReturnType) ->
+    {attribute, 1, spec,
+     {{Fun, length(Args)},
+      [gen_type('fun',
+                [gen_type(product, Args), ReturnType])]}}.
+
+%% @doc return AST of the code string.
+parse(String) ->
+    t:d({try_to_parse, String}),
+    case erl_scan:string(String) of
+        {ok, Tokens, _} ->
+            t:d({fooo, erl_parse:parse_exprs(Tokens)}),
+            case erl_parse:parse_exprs(Tokens) of
+                {ok, [Expr]} ->
+                    t:d({retu_fooo, Expr}),
+                    Expr;
+                {ok, Exprs} ->
+                    error(lists:flatten(io_lib:format("multiple expr generated: ~p", [Exprs])));
+                {error, Reason} ->
+                    error(Reason)
+            end;
+        {error, Reason} ->
+            error(Reason)
+    end.
+
+gen_clause(S) ->
+    extract_clause_from_fun(parse(S)).
+
+format(Format, String) ->
+    lists:flatten(io_lib:format(Format, String)).
+
 %% handle_call(_Request={add, V}, _From, State) ->
 %%     t:d({call, _Request}),
 %%     {V1, S1} = fun_injector_sample_module_a:add(V, State),
 %%     {reply, V1, S1};
 gen_handle_call_clause(Mod, Fun, Arity) ->
-    Args = gen_args(Arity-1),
-    ReqTuple = gen_tuple([gen_atom(Fun)]++Args),
+    Args = gen_args_src(Arity-1),
+    ReqList = [atom_to_list(Fun)]++Args,
+    %% ReqTuple = gen_tuple([gen_atom(Fun)]++Args),
     %% {clause, Line, Args, Guards, Body}
     %% {call, Line, {remote, Line, {atom, Line, Mod}, {atom, Line, Fun}}
-    gen_clause([ReqTuple, gen_var('_From'), gen_var('State')], [],
-               [gen_match(gen_tuple([gen_var('RV'), gen_var('S1')]),
-                          gen_call(Mod, Fun, Args++[gen_var('State')])),
-                gen_tuple([gen_atom(reply), gen_var('RV'), gen_var('S1')])
-               ]).
+    %% t:d({ff, parse("-spec foo(integer()) -> integer().")}),
+    S = format("fun({~s}, _From, State) -> {RV, S1} = ~p:~p(~s), {reply, RV, S1} end.",
+               [join_comma(ReqList), Mod, Fun, join_comma(Args++["State"])]),
+    t:d({parsed, parse(S)}),
+    gen_clause(S).
+
+
+extract_clause_from_fun({'fun', _, {clauses, [Clause]}}) ->
+    Clause.
 
 %% -spec add(pid(), integer(), integer()) -> integer().
-%% add(ServerPid, A, B) ->
-%%     gen_server:call(ServerPid, {add, A, B}).
+%% add(ServerRef, A, B) ->
+%%     gen_server:call(ServerRef, {add, A, B}).
 gen_entry_fun(Fun, Arity) ->
-    Args = gen_args(Arity-1),
+    Args = gen_args_src(Arity-1),
     ReqTuple = gen_tuple([gen_atom(Fun)]++Args),
+    S = format("fun(~s) -> gen_server:call(ServerRef, {~s}) end.",
+               [join_comma(["ServerRef"]++Args), join_comma([atom_to_list(Fun)]++Args)]),
     %% TODO gen spec
-    gen_fun(Fun, Arity,
-            [
-             gen_clause([gen_var('ServerRef')|Args], [],
-                        [
-                         gen_call(gen_server, call, [gen_var('ServerRef'), ReqTuple])
-                        ])
-            ]).
+    %% ArgsType = [],
+    %% RT = 
+    %% t:d({gen_spec(Fun, ArgsType, RT)}),
+    [
+     gen_fun(Fun, Arity, [gen_clause(S)])
+    ].
+
+join_comma(Ss) ->
+    string:join(Ss, ", ").
 
 %% init([]) ->
 %%     fun_injector_sample_module_a:init(1).
 gen_init_fun(Mod, Fun, Arity) ->
-    Args = gen_args(Arity),
+    Args = gen_args_src(Arity),
     %% TODO gen spec
-    gen_fun(init, Arity,
-            [
-             gen_clause([gen_list(Args)], [],
-                        [
-                         gen_call(Mod, Fun, Args)
-                        ])
-            ]).
+    S = format("fun([~s]) -> ~s:~s(~s) end.",
+               [join_comma(Args), atom_to_list(Mod), atom_to_list(Fun), join_comma(Args)]),
+    %% AT = % TODO extract from orig spec
+    %% RT = gen_type(gen_remote_type(Mod, state)),
+    %% t:d({spec, gen_spec(init, AT, RT)}),
+    [
+     gen_fun(init, Arity, [gen_clause(S)])
+    ].
 
 %% start_link(ServerName, _V0, Options) ->
 %%     gen_server:start_link({local, ?MODULE}, ?MODULE, [_V0], []).
 gen_start_link_fun(WithServerName, ServerMod, Fun, Arity) ->
-    Args = gen_args(Arity),
+    Args = gen_args_src(Arity),
     AdditionalArg = case WithServerName of
-                        true -> [gen_var('ServerName')];
+                        true -> ["ServerName"];
                         false -> []
                     end,
-    StartLinkArgs = AdditionalArg++Args++[gen_var('Options')],
+    StartLinkArgs = AdditionalArg++Args++["Options"],
     %% TODO gen spec
-    gen_fun(start_link, length(StartLinkArgs),
+    ArgsListS = format("[~s]", [join_comma(Args)]),
+    S = format("fun(~s) -> gen_server:start_link(~s) end.",
+               [join_comma(StartLinkArgs),
+                join_comma(AdditionalArg++[atom_to_list(ServerMod), ArgsListS, "Options"])]),
+    %% Spec = ...
+    F = gen_fun(start_link, length(StartLinkArgs),
             [
-             gen_clause(StartLinkArgs, [],
-                        [
-                         gen_call(gen_server, start_link, AdditionalArg++[gen_atom(ServerMod), gen_list(Args), gen_var('Options')])
-                        ])
-            ]).
+             gen_clause(S)
+             %% gen_clause(StartLinkArgs, [],
+             %%            [
+             %%             gen_call(gen_server, start_link, AdditionalArg++[gen_atom(ServerMod), gen_list(Args), gen_var('Options')])
+             %%            ])
+            ]),
+    [F].
 
--spec extract_funs(module(), module()) -> {ok, [{Fun::term(), Arity::integer()}], [Clause::term()], [ExportedFun::term()]}
+-spec extract_funs(module(), module()) -> {ok, [{Fun::term(), Arity::integer()}], [Clause::term()], [ExportedSpecFunForm::term()]}
                                     | {error, Reason::term()}.
 extract_funs(ServerMod, Mod) ->
     case load_code(Mod) of
@@ -219,6 +288,10 @@ extract_funs(ServerMod, Mod) ->
                                                         end, Forms)),
             t:d({loaded_mod, Forms}),
             t:d({exported, ExportedFuns}),
+            Specs = lists:filtermap(fun({attribute, _, spec, {MA, [{type, _, 'fun', [A, R]}]}}) -> {true, {MA, A, R}};
+                                       (_) -> false
+                                    end, Forms),
+            t:d({specs, Specs}),
             GenFuns = [ F || F={Name, _} <- ExportedFuns, Name=/=init ],
             InitFuns = [ F || F={Name, _} <- ExportedFuns, Name=:=init ],
             case InitFuns of
@@ -231,7 +304,10 @@ extract_funs(ServerMod, Mod) ->
                     t:d({init_fun, InitFunForm}),
                     t:d({genFuns, GenFuns}),
                     {Es, Cs, Fs} = lists:unzip3([ {{F,A}, gen_handle_call_clause(Mod, F, A), gen_entry_fun(F, A)} || {F, A} <- GenFuns ]),
-                    {ok, [{start_link, InitArity+1}, {start_link, InitArity+2}|Es], Cs, [StartLinkFunUsing3, StartLinkFunUsing4, InitFunForm|Fs]}
+                    {ok,
+                     [{start_link, InitArity+1}, {start_link, InitArity+2}|Es],
+                     Cs,
+                     StartLinkFunUsing3 ++ StartLinkFunUsing4 ++ InitFunForm ++ lists:append(Fs)}
             end;
         _ ->
             {error, io_lib:format("Failed to load module ~p", [Mod])}
