@@ -6,7 +6,7 @@ Motivation
 ======
 - Testing your gen_server is sometimes not easy.
 - To avoid that, you might split gen_server into complicated logic module and a thin gen_server which calls the logic module.
-- Then you might write exported functions which call gen_server:call, handle_call clauses which call corresponding funcion in the logic module, following some rules.
+- Then you might write exported functions which call gen_server:call and handle_call clauses which call corresponding funcion in the logic module, following some rules.
 - .... that's buggy and really boring.
 - fun_injector auto-generate those wrapper functions instead of you, Yay!
 
