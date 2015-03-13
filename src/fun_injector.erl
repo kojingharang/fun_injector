@@ -214,12 +214,10 @@ gen_start_link_fun(WithServerName, ServerMod, _InitFun, InitArity, {{_F, _A}, _A
                         false -> []
                     end,
     StartLinkArgs = AdditionalArg++Args++["Options"],
-    %% TODO gen spec SN++AT++Op -> rt of gen_server:start_link
     ArgsListS = format("[~s]", [join_comma(Args)]),
     S = format("fun(~s) -> gen_server:start_link(~s) end.",
                [join_comma(StartLinkArgs),
                 join_comma(AdditionalArg++[atom_to_list(ServerMod), ArgsListS, "Options"])]),
-    %% Spec = ...
     F = gen_fun(start_link, length(StartLinkArgs), [gen_clause(S)]),
     [F].
 
