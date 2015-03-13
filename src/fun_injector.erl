@@ -242,6 +242,7 @@ gen_init_fun(Mod, Fun, Arity, {_AT, _RT}) ->
     %% RT = gen_type(gen_remote_type(Mod, state)),
     %% t:d({spec, gen_spec(init, AT, RT)}),
     [
+     gen_spec(init, _AT, _RT),
      gen_fun(init, Arity, [gen_clause(S)])
     ].
 
