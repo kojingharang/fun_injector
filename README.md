@@ -18,7 +18,7 @@ How to use
 ```
 
 2. Add an empty gen_server implementation.
-4. Add compile option like this:
+3. Add compile option like this:
 ```
 -compile([{parse_transform, fun_injector},
           {fun_injector_extract_from, fun_injector_sample_module_a}]).
