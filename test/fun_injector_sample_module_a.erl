@@ -34,12 +34,10 @@
 %%----------------------------------------------------------------------------------------------------------------------
 -spec init(integer()) -> {ok, ?MODULE:state()}.
 init(V) ->
-    t:d({init, V}),
     {ok, #?STATE{value=V}}.
 
 -spec add(integer(), state()) -> {integer(), ?MODULE:state()}.
 add(V, State=#?STATE{value=Cur}) when V >= 0 ->
-    t:d({add, V, cur, Cur}),
     {Cur+V, State#?STATE{value=Cur+V}}.
 
 -spec get(state()) -> {integer(), ?MODULE:state()}.
