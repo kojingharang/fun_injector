@@ -1,4 +1,4 @@
-%% @copyright (C) 2015 Koji Hara. All Rights Reserved.
+%% @copyright (C) 2015- kojingharang. All Rights Reserved.
 %%
 -module(fun_injector_tests).
 
@@ -6,24 +6,32 @@
 
 fun_injector_test_() ->
     [
-     {"launch server using gen_server:start_link/3",
+     {"[HandWritten] launch server using gen_server:start_link/3",
       fun () ->
-              {ok, Pid} = fun_injector_sample_gen_server:start_link(1, []),
+              {ok, Pid} = adder_server_handwritten:start_link(1, []),
               ?assertEqual(3, gen_server:call(Pid, {add, 2})),
-              ?assertEqual(5, fun_injector_sample_gen_server:add(Pid, 2)),
-              ?assertEqual(5, fun_injector_sample_gen_server:get(Pid)),
-              %% Overloaded get
-              ?assertEqual(result_of_get2, fun_injector_sample_gen_server:get(Pid, 0)),
+              ?assertEqual(5, adder_server_handwritten:add(Pid, 2)),
+              ?assertEqual(5, adder_server_handwritten:get(Pid)),
               ok
       end},
-     {"launch server using gen_server:start_link/4",
+     {"[Generated] launch server using gen_server:start_link/3",
       fun () ->
-              {ok, _Pid} = fun_injector_sample_gen_server:start_link({local, fun_injector_sample_gen_server}, 1, []),
-              ?assertEqual(3, gen_server:call(fun_injector_sample_gen_server, {add, 2})),
-              ?assertEqual(5, fun_injector_sample_gen_server:add(fun_injector_sample_gen_server, 2)),
-              ?assertEqual(5, fun_injector_sample_gen_server:get(fun_injector_sample_gen_server)),
+              {ok, Pid} = adder_server_generated:start_link(1, []),
+              ?assertEqual(3, gen_server:call(Pid, {add, 2})),
+              ?assertEqual(5, adder_server_generated:add(Pid, 2)),
+              ?assertEqual(5, adder_server_generated:get(Pid)),
               %% Overloaded get
-              ?assertEqual(result_of_get2, fun_injector_sample_gen_server:get(fun_injector_sample_gen_server, 0)),
+              ?assertEqual(result_of_get2, adder_server_generated:get(Pid, 0)),
+              ok
+      end},
+     {"[Generated] launch server using gen_server:start_link/4",
+      fun () ->
+              {ok, _Pid} = adder_server_generated:start_link({local, adder}, 1, []),
+              ?assertEqual(3, gen_server:call(adder, {add, 2})),
+              ?assertEqual(5, adder_server_generated:add(adder, 2)),
+              ?assertEqual(5, adder_server_generated:get(adder)),
+              %% Overloaded get
+              ?assertEqual(result_of_get2, adder_server_generated:get(adder, 0)),
               ok
       end}
     ].

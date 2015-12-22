@@ -1,8 +1,8 @@
 %% vim: set ft=erlang : -*- erlang -*-
-%% @copyright (C) 2015 Koji Hara. All Rights Reserved.
+%% @copyright (C) 2015- kojingharang. All Rights Reserved.
 %%
 %% @doc Sample module.
--module(fun_injector_sample_module_a).
+-module(adder).
 
 %%----------------------------------------------------------------------------------------------------------------------
 %% Exported API
@@ -44,7 +44,7 @@ add(V, State=#?STATE{value=Cur}) when V >= 0 ->
 get(State=#?STATE{value=Cur}) ->
     {Cur, State}.
 
--spec get(term(), state()) -> {integer(), ?MODULE:state()}.
+-spec get(term(), state()) -> {result_of_get2, ?MODULE:state()}.
 get(_Any, State) ->
     {result_of_get2, State}.
 

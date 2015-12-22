@@ -1,13 +1,13 @@
-%% @copyright (C) 2015 Koji Hara. All Rights Reserved.
+%% @copyright (C) 2015- kojingharang. All Rights Reserved.
 %%
 %% @doc Sample gen_server.
--module(fun_injector_sample_gen_server).
+-module(adder_server_generated).
 
 -behaviour(gen_server).
 
-%% Options to inject exported funs in module `fun_injector_sample_module_a' into this module.
+%% Options to inject exported funs in module `adder' into this module.
 -compile([{parse_transform, fun_injector},
-          {fun_injector_extract_from, fun_injector_sample_module_a}]).
+          {fun_injector_extract_from, adder}]).
 
 %%----------------------------------------------------------------------------------------------------------------------
 %% Exported API

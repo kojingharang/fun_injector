@@ -1,4 +1,4 @@
-%% @copyright (C) 2015 Koji Hara. All Rights Reserved.
+%% @copyright (C) 2015- kojingharang. All Rights Reserved.
 %%
 %% @doc Injects functions in some module into specified gen_server by using parse_transform
 -module(fun_injector).
