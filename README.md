@@ -20,9 +20,9 @@ How to use
 3. Add compile option like this:
 
           -compile([{parse_transform, fun_injector},
-                    {fun_injector_extract_from, fun_injector_sample_module_a}]).
+                    {fun_injector_extract_from, adder}]).
 
-Now your gen_server have exported functions defined in fun_injector_sample_module_a.
+Now your gen_server have exported functions defined in adder.
 
 See test directory for detail.
 
